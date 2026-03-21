@@ -5,14 +5,26 @@ import (
 	"net/http"
 )
 
-func main() {
-	serveMux := http.NewServeMux()
-	handler := http.FileServer(http.Dir("."))
-	serveMux.Handle("/", handler)
+func handlerReady(w http.ResponseWriter, _ *http.Request) {
+	w.Header().Add("Content-Type", "text/plain; charset=utf-8")
+	w.WriteHeader(http.StatusOK)
+	w.Write([]byte("OK"))
+}
 
-	server := http.Server{
+func main() {
+	const port = "8080"
+	const fileRoot = "."
+
+	serveMux := http.NewServeMux()
+
+	fileHandler := http.FileServer(http.Dir(fileRoot))
+
+	serveMux.Handle("/app/", http.StripPrefix("/app", fileHandler))
+	serveMux.HandleFunc("/healthz", handlerReady)
+
+	server := &http.Server{
 		Handler: serveMux,
-		Addr:    ":8080",
+		Addr:    ":" + port,
 	}
 
 	err := server.ListenAndServe()
