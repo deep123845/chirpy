@@ -18,11 +18,11 @@ func handlerReady(w http.ResponseWriter, _ *http.Request) {
 }
 
 func (cfg *apiConfig) handlerMetrics(w http.ResponseWriter, _ *http.Request) {
-	w.Header().Add("Content-Type", "text/plain; charset=utf-8")
+	w.Header().Add("Content-Type", "text/html; charset=utf-8")
 	w.WriteHeader(http.StatusOK)
 
 	hits := cfg.fileserverHits.Load()
-	hitsString := fmt.Sprintf("Hits: %v", hits)
+	hitsString := fmt.Sprintf("<html><body><h1>Welcome, Chirpy Admin</h1><p>Chirpy has been visited %d times!</p></body></html>", hits)
 	w.Write([]byte(hitsString))
 }
 
@@ -50,9 +50,9 @@ func main() {
 	fileHandler := http.StripPrefix("/app", http.FileServer(http.Dir(fileRoot)))
 
 	serveMux.Handle("/app/", cfg.middlewareMetricsInc(fileHandler))
-	serveMux.HandleFunc("GET /healthz", handlerReady)
-	serveMux.HandleFunc("GET /metrics", cfg.handlerMetrics)
-	serveMux.HandleFunc("POST /reset", cfg.handlerResetMetrics)
+	serveMux.HandleFunc("GET /api/healthz", handlerReady)
+	serveMux.HandleFunc("GET /admin/metrics", cfg.handlerMetrics)
+	serveMux.HandleFunc("POST /admin/reset", cfg.handlerResetMetrics)
 
 	server := &http.Server{
 		Handler: serveMux,
