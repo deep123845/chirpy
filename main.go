@@ -20,7 +20,10 @@ func main() {
 	fileHandler := http.StripPrefix("/app", http.FileServer(http.Dir(fileRoot)))
 
 	serveMux.Handle("/app/", cfg.middlewareMetricsInc(fileHandler))
+
 	serveMux.HandleFunc("GET /api/healthz", handlerReady)
+	serveMux.HandleFunc("POST /api/validate_chirp", handlerValidateChirp)
+
 	serveMux.HandleFunc("GET /admin/metrics", cfg.handlerMetrics)
 	serveMux.HandleFunc("POST /admin/reset", cfg.handlerResetMetrics)
 
