@@ -3,6 +3,8 @@ package main
 import (
 	"encoding/json"
 	"net/http"
+	"slices"
+	"strings"
 )
 
 type chirp struct {
@@ -25,9 +27,25 @@ func handlerValidateChirp(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	type valid struct {
-		Valid bool `json:"valid"`
+	type response struct {
+		CleanedBody string `json:"cleaned_body"`
 	}
-	validRes := valid{Valid: true}
+	validRes := response{CleanedBody: censorMessage(currChirp.Body)}
 	respondWithJSON(w, http.StatusOK, validRes)
+}
+
+func censorMessage(msg string) string {
+	var bannedWords = []string{"kerfuffle", "sharbert", "fornax"}
+
+	words := strings.Split(msg, " ")
+
+	for i, word := range words {
+		word = strings.ToLower(word)
+
+		if slices.Contains(bannedWords, word) {
+			words[i] = "****"
+		}
+	}
+
+	return strings.Join(words, " ")
 }
