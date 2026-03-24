@@ -1,9 +1,17 @@
 package main
 
 import (
+	"context"
+	"database/sql"
 	"fmt"
+	"log"
 	"net/http"
+	"os"
 	"sync/atomic"
+
+	"github.com/deep123845/chirpy/internal/database"
+	"github.com/joho/godotenv"
+	_ "github.com/lib/pq"
 )
 
 type apiConfig struct {
@@ -11,8 +19,19 @@ type apiConfig struct {
 }
 
 func main() {
+	godotenv.Load()
+
 	const port = "8080"
 	const fileRoot = "."
+
+	dbURL := os.Getenv("DB_URL")
+	db, err := sql.Open("postgres", dbURL)
+	if err != nil {
+		log.Fatalf("Could not open DB, %v", err)
+	}
+
+	dbQueries := database.New(db)
+	dbQueries.CreateUser(context.Background(), "test@test.com")
 
 	cfg := &apiConfig{}
 	serveMux := http.NewServeMux()
@@ -32,7 +51,7 @@ func main() {
 		Addr:    ":" + port,
 	}
 
-	err := server.ListenAndServe()
+	err = server.ListenAndServe()
 	if err != nil {
 		fmt.Printf("Error: %v", err)
 	}
