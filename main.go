@@ -1,7 +1,6 @@
 package main
 
 import (
-	"context"
 	"database/sql"
 	"fmt"
 	"log"
@@ -16,6 +15,8 @@ import (
 
 type apiConfig struct {
 	fileserverHits atomic.Int32
+	db             *database.Queries
+	dev            bool
 }
 
 func main() {
@@ -30,10 +31,14 @@ func main() {
 		log.Fatalf("Could not open DB, %v", err)
 	}
 
-	dbQueries := database.New(db)
-	dbQueries.CreateUser(context.Background(), "test@test.com")
+	dev := os.Getenv("PLATFORM") == "dev"
 
-	cfg := &apiConfig{}
+	dbQueries := database.New(db)
+
+	cfg := &apiConfig{
+		db:  dbQueries,
+		dev: dev,
+	}
 	serveMux := http.NewServeMux()
 
 	fileHandler := http.StripPrefix("/app", http.FileServer(http.Dir(fileRoot)))
@@ -42,9 +47,10 @@ func main() {
 
 	serveMux.HandleFunc("GET /api/healthz", handlerReady)
 	serveMux.HandleFunc("POST /api/validate_chirp", handlerValidateChirp)
+	serveMux.HandleFunc("POST /api/users", cfg.handlerCreateUser)
 
 	serveMux.HandleFunc("GET /admin/metrics", cfg.handlerMetrics)
-	serveMux.HandleFunc("POST /admin/reset", cfg.handlerResetMetrics)
+	serveMux.HandleFunc("POST /admin/reset", cfg.handlerReset)
 
 	server := &http.Server{
 		Handler: serveMux,

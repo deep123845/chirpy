@@ -14,13 +14,6 @@ func (cfg *apiConfig) handlerMetrics(w http.ResponseWriter, _ *http.Request) {
 	w.Write([]byte(hitsString))
 }
 
-func (cfg *apiConfig) handlerResetMetrics(w http.ResponseWriter, _ *http.Request) {
-	cfg.fileserverHits.Store(0)
-
-	w.Header().Add("Content-Type", "text/plain; charset=utf-8")
-	w.WriteHeader(http.StatusOK)
-}
-
 func (cfg *apiConfig) middlewareMetricsInc(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		cfg.fileserverHits.Add(1)
