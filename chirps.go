@@ -55,6 +55,27 @@ func (cfg *apiConfig) handlerCreateChirp(w http.ResponseWriter, r *http.Request)
 	})
 }
 
+func (cfg *apiConfig) handlerGetChirps(w http.ResponseWriter, r *http.Request) {
+	data, err := cfg.db.GetAllChirps(r.Context())
+	if err != nil {
+		respondWithError(w, http.StatusInternalServerError, "Failed to get all chirps", err)
+		return
+	}
+
+	var chirps []chirp
+	for _, entry := range data {
+		chirps = append(chirps, chirp{
+			Id:        entry.ID,
+			CreatedAt: entry.CreatedAt,
+			UpdatedAt: entry.UpdatedAt,
+			Body:      entry.Body,
+			UserId:    entry.UserID,
+		})
+	}
+
+	respondWithJSON(w, http.StatusOK, chirps)
+}
+
 func censorMessage(msg string) string {
 	var bannedWords = []string{"kerfuffle", "sharbert", "fornax"}
 
