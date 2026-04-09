@@ -167,6 +167,7 @@ func (cfg *apiConfig) handlerUpdateAccount(w http.ResponseWriter, r *http.Reques
 	accessToken, err := auth.GetBearerToken(r.Header)
 	if err != nil {
 		respondWithError(w, http.StatusUnauthorized, "Couldn't get authorization", err)
+		return
 	}
 
 	userId, err := auth.ValidateJWT(accessToken, cfg.jwtSecret)
