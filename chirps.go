@@ -111,6 +111,45 @@ func (cfg *apiConfig) handlerGetChirp(w http.ResponseWriter, r *http.Request) {
 	})
 }
 
+func (cfg *apiConfig) handlerDeleteChirp(w http.ResponseWriter, r *http.Request) {
+	accessToken, err := auth.GetBearerToken(r.Header)
+	if err != nil {
+		respondWithError(w, http.StatusUnauthorized, "Couldn't get authorization", err)
+		return
+	}
+
+	userId, err := auth.ValidateJWT(accessToken, cfg.jwtSecret)
+	if err != nil {
+		respondWithError(w, http.StatusUnauthorized, "Couldn't get authorization", err)
+		return
+	}
+
+	chirpId, err := uuid.Parse(r.PathValue("chirpID"))
+	if err != nil {
+		respondWithError(w, http.StatusBadRequest, "Must Provide valid chirp id", err)
+		return
+	}
+
+	data, err := cfg.db.GetChirpById(r.Context(), chirpId)
+	if err != nil {
+		respondWithError(w, http.StatusNotFound, "Chirp not found", err)
+		return
+	}
+
+	if data.UserID != userId {
+		respondWithError(w, http.StatusForbidden, "Not owner of that chirp", nil)
+		return
+	}
+
+	err = cfg.db.DeleteChirp(r.Context(), data.ID)
+	if err != nil {
+		respondWithError(w, http.StatusInternalServerError, "Unable to delete chirp", err)
+		return
+	}
+
+	w.WriteHeader(http.StatusNoContent)
+}
+
 func censorMessage(msg string) string {
 	var bannedWords = []string{"kerfuffle", "sharbert", "fornax"}
 
