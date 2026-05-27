@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"net/http"
 	"slices"
+	"sort"
 	"strings"
 	"time"
 
@@ -71,16 +72,40 @@ func (cfg *apiConfig) handlerCreateChirp(w http.ResponseWriter, r *http.Request)
 func (cfg *apiConfig) handlerGetChirps(w http.ResponseWriter, r *http.Request) {
 	queryParams := r.URL.Query()
 	author_id := queryParams.Get("author_id")
-	if author_id != "" {
-		cfg.handlerGetChirpsWithAuthor(w, r, author_id)
-		return
-	}
-	data, err := cfg.db.GetAllChirps(r.Context())
+	sort_dir := queryParams.Get("sort")
+
+	chirps, err := cfg.getChirpsFromDB(r, author_id)
 	if err != nil {
-		respondWithError(w, http.StatusInternalServerError, "Failed to get all chirps", err)
+		respondWithError(w, http.StatusBadRequest, "Unable to find chirps", err)
 		return
 	}
 
+	if sort_dir == "desc" {
+		sort.Slice(chirps, func(i, j int) bool { return chirps[i].CreatedAt.Compare(chirps[j].CreatedAt) == 1 })
+	}
+
+	respondWithJSON(w, http.StatusOK, chirps)
+}
+
+func (cfg *apiConfig) getChirpsFromDB(r *http.Request, author_id string) ([]chirp, error) {
+	var data []database.Chirp
+	var err error
+	if author_id == "" {
+		data, err = cfg.db.GetAllChirps(r.Context())
+		if err != nil {
+			return nil, err
+		}
+	} else {
+		author, err := uuid.Parse(author_id)
+		if err != nil {
+			return nil, err
+		}
+
+		data, err = cfg.db.GetChirpsByAuthor(r.Context(), author)
+		if err != nil {
+			return nil, err
+		}
+	}
 	var chirps []chirp
 	for _, entry := range data {
 		chirps = append(chirps, chirp{
@@ -92,7 +117,7 @@ func (cfg *apiConfig) handlerGetChirps(w http.ResponseWriter, r *http.Request) {
 		})
 	}
 
-	respondWithJSON(w, http.StatusOK, chirps)
+	return chirps, nil
 }
 
 func (cfg *apiConfig) handlerGetChirpsWithAuthor(w http.ResponseWriter, r *http.Request, author_id string) {
